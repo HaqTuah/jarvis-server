@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Jarvis</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+#header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0}
+#header .dot{width:10px;height:10px;border-radius:50%;background:#00e676;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+#header h1{font-size:17px;font-weight:600;color:#fff;flex:1}
+#header .status{font-size:12px;color:rgba(255,255,255,0.3)}
+#messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
+.msg{max-width:85%;padding:12px 16px;border-radius:16px;font-size:15px;line-height:1.4;animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.user{background:#6c5ce7;align-self:flex-end;border-bottom-right-radius:4px;color:#fff}
+.jarvis{background:rgba(255,255,255,0.06);align-self:flex-start;border-bottom-left-radius:4px;color:rgba(255,255,255,0.9)}
+.msg .time{font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px;text-align:right}
+.typing{display:flex;gap:4px;padding:4px 0}
+.typing span{width:8px;height:8px;border-radius:50%;background:#6c5ce7;animation:bounce 1.4s infinite}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+#input{display:flex;gap:8px;padding:12px 16px;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0;background:#0a0a1a}
+#input input{flex:1;background:rgba(255,255,255,0.06);border:none;border-radius:20px;padding:12px 16px;color:#fff;font-size:15px;outline:none}
+#input input::placeholder{color:rgba(255,255,255,0.3)}
+#input button{width:44px;height:44px;border-radius:22px;background:#6c5ce7;border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+#input button:disabled{opacity:0.3}
+.welcome{text-align:center;color:rgba(255,255,255,0.3);font-size:14px;padding:40px 20px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.welcome .icon{font-size:48px;margin-bottom:8px}
+.welcome h2{font-size:22px;font-weight:700;color:rgba(255,255,255,0.8)}
+@media(prefers-color-scheme:light){body{background:#fff;color:#1a1a1a}#header{border-bottom-color:rgba(0,0,0,0.05)}.jarvis{background:rgba(0,0,0,0.04);color:#1a1a1a}#input{border-top-color:rgba(0,0,0,0.05);background:#fff}#input input{background:rgba(0,0,0,0.04);color:#1a1a1a}.welcome{color:rgba(0,0,0,0.3)}.welcome h2{color:rgba(0,0,0,0.7)}}
+</style>
+</head>
+<body>
+<div id="header">
+<div class="dot"></div>
+<h1>Jarvis</h1>
+<span class="status" id="status">connected</span>
+</div>
+<div id="messages">
+<div class="welcome" id="welcome">
+<div class="icon">🧠</div>
+<h2>Jarvis</h2>
+<p>Your AI assistant. Ask me anything.</p>
+</div>
+</div>
+<div id="input">
+<input type="text" id="textInput" placeholder="Message Jarvis..." autofocus>
+<button id="sendBtn" disabled>➤</button>
+</div>
+<script>
+const SERVER = window.location.origin;
+const messages = document.getElementById('messages');
+const input = document.getElementById('textInput');
+const sendBtn = document.getElementById('sendBtn');
+const welcome = document.getElementById('welcome');
+const status = document.getElementById('status');
+let loading = false;
+
+// Load history
+fetch(SERVER + '/history?count=50').then(r=>r.json()).then(data=>{
+if(data.history&&data.history.length>0){
+welcome.style.display='none';
+data.history.forEach(addMsg);
+scrollToBottom();
+}
+}).catch(()=>{});
+
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+input.addEventListener('input',()=>{sendBtn.disabled=!input.value.trim()||loading});
+sendBtn.addEventListener('click',send);
+
+async function send(){
+const text=input.value.trim();
+if(!text||loading)return;
+input.value='';sendBtn.disabled=true;
+welcome.style.display='none';
+addMsg({role:'user',text,timestamp:Date.now()});
+scrollToBottom();
+const typing=showTyping();
+loading=true;
+try{
+const res=await fetch(SERVER+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})});
+const data=await res.json();
+typing.remove();
+addMsg({role:'assistant',text:data.response||'...',timestamp:data.timestamp||Date.now()});
+speak(data.response||'');
+}catch(e){
+typing.remove();
+addMsg({role:'assistant',text:'Error: '+e.message});
+}
+loading=false;
+sendBtn.disabled=!input.value.trim();
+scrollToBottom();
+}
+
+function addMsg(msg){
+const div=document.createElement('div');
+div.className='msg '+(msg.role==='user'?'user':'jarvis');
+const time=new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+div.innerHTML=msg.text+'<div class="time">'+time+'</div>';
+messages.appendChild(div);
+}
+
+function showTyping(){
+const div=document.createElement('div');
+div.className='msg jarvis typing';
+div.innerHTML='<span></span><span></span><span></span>';
+messages.appendChild(div);
+scrollToBottom();
+return div;
+}
+
+function scrollToBottom(){messages.scrollTop=messages.scrollHeight}
+
+function speak(text){
+if('speechSynthesis' in window){
+const u=new SpeechSynthesisUtterance(text);
+u.rate=0.9;u.pitch=1;
+speechSynthesis.cancel();
+speechSynthesis.speak(u);
+}
+}
+</script>
+</body>
+</html>

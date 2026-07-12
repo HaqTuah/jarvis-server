@@ -1,0 +1,24 @@
+# Jarvis Cloud Server — Deploy to Render (Free)
+#
+# 1. Push this folder to a GitHub repo
+# 2. Go to https://render.com → New Web Service
+# 3. Connect your repo
+# 4. Set:
+#    - Name: jarvis-server
+#    - Root Directory: jarvis-server
+#    - Build Command: npm install
+#    - Start Command: node server.js
+# 5. Deploy (takes ~2 min)
+# 6. Get your URL like: https://jarvis-server.onrender.com
+#
+# Then update SERVER_URL in jarvis-mobile/app/chat.tsx
+
+build:
+  command: npm install
+  root: jarvis-server
+
+start: node server.js
+
+env:
+  - key: NODE_VERSION
+    value: 20
