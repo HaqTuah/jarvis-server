@@ -166,6 +166,79 @@ app.post('/reset', async (req, res) => {
   res.json({ status: 'reset' });
 });
 
+// ── File System API ────────────────────────────────────────
+app.post('/api/files/read', async (req, res) => {
+  try {
+    const { path: filePath } = req.body;
+    const safePath = security.sanitizeInput(filePath || '');
+    if (!safePath) return res.status(400).json({ error: 'Path required' });
+    const fullPath = path.resolve(safePath);
+    if (!fullPath.startsWith(process.cwd())) return res.status(403).json({ error: 'Access denied' });
+    const content = fs.readFileSync(fullPath, 'utf-8');
+    res.json({ content, size: content.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/files/write', async (req, res) => {
+  try {
+    const { path: filePath, content } = req.body;
+    if (!filePath || content === undefined) return res.status(400).json({ error: 'Path and content required' });
+    const fullPath = path.resolve(filePath);
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(fullPath, content, 'utf-8');
+    res.json({ status: 'written', path: fullPath });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/files/delete', async (req, res) => {
+  try {
+    const { path: filePath } = req.body;
+    if (!filePath) return res.status(400).json({ error: 'Path required' });
+    fs.unlinkSync(path.resolve(filePath));
+    res.json({ status: 'deleted' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/files/list', async (req, res) => {
+  try {
+    const dirPath = req.body.path || process.cwd();
+    const items = fs.readdirSync(path.resolve(dirPath), { withFileTypes: true });
+    const files = items.map(i => ({
+      name: i.name,
+      type: i.isDirectory() ? 'directory' : 'file',
+      size: i.isFile() ? fs.statSync(path.join(dirPath, i.name)).size : 0
+    }));
+    res.json({ files });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Terminal API ───────────────────────────────────────────
+app.post('/api/terminal/run', async (req, res) => {
+  try {
+    const { command } = req.body;
+    if (!command) return res.status(400).json({ error: 'Command required' });
+    const { execSync } = await import('child_process');
+    const output = execSync(command, { encoding: 'utf-8', timeout: 30000, windowsHide: true });
+    res.json({ output, exitCode: 0 });
+  } catch (e) {
+    res.json({ output: e.stdout || '', error: e.stderr || e.message, exitCode: e.status || 1 });
+  }
+});
+
+// ── Skills list ────────────────────────────────────────────
+app.get('/api/skills', (req, res) => {
+  res.json({ skills: jarvis.skills.listSkills() });
+});
+
 // ── Start ───────────────────────────────────────────────────
 async function start() {
   await initJarvis();
