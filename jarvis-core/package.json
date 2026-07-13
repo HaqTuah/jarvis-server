@@ -1,0 +1,17 @@
+{
+  "name": "jarvis-core",
+  "version": "1.0.0",
+  "description": "Shared Jarvis AI engine - memory, skills, and intelligence layer for desktop + mobile",
+  "main": "index.js",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./memory": "./memory/index.js",
+    "./skills": "./skills/index.js",
+    "./ai": "./ai/index.js"
+  },
+  "scripts": {
+    "test": "node test.js"
+  },
+  "license": "MIT"
+}

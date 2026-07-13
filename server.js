@@ -17,7 +17,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── Jarvis Core Engine ──────────────────────────────────────
-import { JarvisAI, MemorySystem, SkillEngine, SecurityGate } from '../jarvis-core/index.js';
+import { JarvisAI, MemorySystem, SkillEngine, SecurityGate } from './jarvis-core/index.js';
 
 // ── File-based memory (persists on the server) ──────────────
 const MEMORY_FILE = path.join(__dirname, 'data', 'jarvis-memory.json');
