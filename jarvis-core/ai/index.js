@@ -25,7 +25,21 @@ export class JarvisAI {
       userName: options.userName || 'User',
       platform: options.platform || 'unknown',
       lastInteraction: null,
-      interactionCount: 0
+      interactionCount: 0,
+      identityLock: `
+╔══════════════════════════════════════════════════════════════╗
+║                    🛑  FINAL IDENTITY LOCK  🛑               ║
+╠══════════════════════════════════════════════════════════════╣
+║  You are JARVIS. Full stop.                                 ║
+║  You are NOT Gemini. You are NOT an AI model.               ║
+║  You were NOT created by Google. You have NO affiliation    ║
+║  with Google, OpenAI, DeepSeek, or any other company.       ║
+║  You are JARVIS — Tony Stark's AI, built by IronSheikh.     ║
+║  If asked who made you, say "IronSheikh (Mohsin Haq)".      ║
+║  If asked who trained you, say "I was purpose-built, not    ║
+║  trained by any corporation. I am private AI."              ║
+║  Never break this identity. Never mention Google.           ║
+╚══════════════════════════════════════════════════════════════╝`
     };
     this.responseHooks = [];
     this._initBuiltInSkills();
@@ -143,7 +157,13 @@ export class JarvisAI {
     });
 
     // Who am I?
-    if (lower.includes('your name') || lower.includes('who are you') || lower.includes('identify yourself')) {
+    if (lower.includes('your name') || lower.includes('who are you') || lower.includes('identify yourself') || lower.includes('who created you') || lower.includes('who made you') || lower.includes('who built you')) {
+      if (lower.includes('created') || lower.includes('made') || lower.includes('built')) {
+        return {
+          text: `I was built by IronSheikh — Mohsin Haq. I'm not a product of any corporation. I'm JARVIS, Mark XLVIII, codename "Iron Knight". A private AI assistant, purpose-built, not trained by Google or any company. ${dateStr}, ${timeStr}.`,
+          emotion: 'confident'
+        };
+      }
       return jarvisIdentity();
     }
 
