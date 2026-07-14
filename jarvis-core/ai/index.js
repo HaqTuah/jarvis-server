@@ -6,6 +6,9 @@
 
 import { MemorySystem } from '../memory/index.js';
 import { SkillEngine, builtInSkills } from '../skills/index.js';
+import { fileSystemSkill } from '../skills/fileSystem.js';
+import { searchSkill } from '../skills/search.js';
+import { terminalSkill } from '../skills/terminal.js';
 
 export class JarvisAI {
   constructor(options = {}) {
@@ -32,6 +35,10 @@ export class JarvisAI {
     for (const skill of Object.values(builtInSkills)) {
       this.skills.register({ ...skill });
     }
+    // IDE-like skills (file system, search, terminal)
+    this.skills.register({ ...fileSystemSkill });
+    this.skills.register({ ...searchSkill });
+    this.skills.register({ ...terminalSkill });
   }
 
   async init() {
