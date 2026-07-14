@@ -4,127 +4,261 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Jarvis</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
-#header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0}
-#header .dot{width:10px;height:10px;border-radius:50%;background:#00e676;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
-#header h1{font-size:17px;font-weight:600;color:#fff;flex:1}
-#header .status{font-size:12px;color:rgba(255,255,255,0.3)}
-#messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
-.msg{max-width:85%;padding:12px 16px;border-radius:16px;font-size:15px;line-height:1.4;animation:fadeIn .2s}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.user{background:#6c5ce7;align-self:flex-end;border-bottom-right-radius:4px;color:#fff}
-.jarvis{background:rgba(255,255,255,0.06);align-self:flex-start;border-bottom-left-radius:4px;color:rgba(255,255,255,0.9)}
-.msg .time{font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px;text-align:right}
-.typing{display:flex;gap:4px;padding:4px 0}
-.typing span{width:8px;height:8px;border-radius:50%;background:#6c5ce7;animation:bounce 1.4s infinite}
-.typing span:nth-child(2){animation-delay:.2s}
-.typing span:nth-child(3){animation-delay:.4s}
-@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
-#input{display:flex;gap:8px;padding:12px 16px;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0;background:#0a0a1a}
-#input input{flex:1;background:rgba(255,255,255,0.06);border:none;border-radius:20px;padding:12px 16px;color:#fff;font-size:15px;outline:none}
-#input input::placeholder{color:rgba(255,255,255,0.3)}
-#input button{width:44px;height:44px;border-radius:22px;background:#6c5ce7;border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-#input button:disabled{opacity:0.3}
-.welcome{text-align:center;color:rgba(255,255,255,0.3);font-size:14px;padding:40px 20px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
-.welcome .icon{font-size:48px;margin-bottom:8px}
-.welcome h2{font-size:22px;font-weight:700;color:rgba(255,255,255,0.8)}
-@media(prefers-color-scheme:light){body{background:#fff;color:#1a1a1a}#header{border-bottom-color:rgba(0,0,0,0.05)}.jarvis{background:rgba(0,0,0,0.04);color:#1a1a1a}#input{border-top-color:rgba(0,0,0,0.05);background:#fff}#input input{background:rgba(0,0,0,0.04);color:#1a1a1a}.welcome{color:rgba(0,0,0,0.3)}.welcome h2{color:rgba(0,0,0,0.7)}}
+body{background:#07090f;color:#dde3ed;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+#header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;background:rgba(7,9,15,0.95)}
+#header .logo{font-size:13px;font-weight:700;letter-spacing:4px}
+#header .logo em{color:#6366f1;font-style:normal}
+.pill{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);font-size:10px;font-weight:700;letter-spacing:1px;color:#5e6a7e}
+.pill.on{background:rgba(34,197,94,0.12);border-color:rgba(34,197,94,0.3);color:#22c55e}
+.dot{width:6px;height:6px;border-radius:50%;background:#5e6a7e}
+.pill.on .dot{background:#22c55e;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
+.spacer{flex:1}
+#tabs{display:flex;gap:2px;padding:0 14px;background:rgba(7,9,15,0.95);flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.04);overflow-x:auto}
+.tab{padding:8px 10px;font-size:11px;font-weight:600;letter-spacing:0.5px;color:#5e6a7e;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap}
+.tab:hover{color:#dde3ed}
+.tab.active{color:#6366f1;border-bottom-color:#6366f1}
+.content{flex:1;overflow-y:auto;padding:14px;display:none;flex-direction:column;gap:10px}
+.content.active{display:flex}
+.msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.5;animation:pop 0.15s}
+@keyframes pop{from{opacity:0;transform:translateY(4px)}}
+.msg-j{align-self:flex-start;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.15);border-bottom-left-radius:4px}
+.msg-u{align-self:flex-end;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-bottom-right-radius:4px}
+.msg-sys{align-self:center;font-size:11px;color:#5e6a7e;padding:2px 0;background:transparent;border:none}
+.msg time{font-size:9px;color:rgba(255,255,255,0.25);margin-top:4px;display:block;text-align:right}
+#inp-row{display:flex;gap:8px;padding:8px 0 0;flex-shrink:0}
+#inp-row input{flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:10px 12px;color:#dde3ed;font-size:13px;outline:none}
+#inp-row input:focus{border-color:#6366f1}
+#inp-row button{padding:10px 16px;border:none;border-radius:10px;background:#6366f1;color:#fff;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:1px}
+#inp-row button:disabled{opacity:0.3}
+#inp-row .mic-btn{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);color:#5e6a7e;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:16px}
+#inp-row .mic-btn.recording{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.45);color:#ef4444;animation:mic-pulse 1s infinite}
+@keyframes mic-pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+.sec-title{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#5e6a7e;margin:8px 0 4px}
+.d-btn{display:flex;gap:6px;flex-wrap:wrap}
+.d-btn button{flex:1;min-width:60px;padding:8px;border:1px solid rgba(255,255,255,0.07);border-radius:8px;background:rgba(255,255,255,0.03);color:#dde3ed;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:0.5px;text-align:center}
+.d-btn button:hover{background:rgba(99,102,241,0.1);border-color:#6366f1}
+.file-item{display:flex;gap:6px;padding:4px 0;font-size:13px;align-items:center;cursor:pointer;border-radius:4px;padding:4px 6px}
+.file-item:hover{background:rgba(255,255,255,0.04)}
+.file-item .ic{font-size:16px;width:22px;text-align:center}
+.file-item .nm{flex:1}
+.file-item .sz{color:#5e6a7e;font-size:11px;width:60px;text-align:right}
+.term-box{background:rgba(0,0,0,0.3);padding:10px;border-radius:8px;font-family:monospace;font-size:12px;color:#22c55e;white-space:pre-wrap;max-height:200px;overflow-y:auto}
+.tag{display:inline-block;padding:4px 10px;border-radius:99px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.15);font-size:11px;margin:3px}
+.search-inp{display:flex;gap:6px;margin-bottom:6px}
+.search-inp input{flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:8px 10px;color:#dde3ed;font-size:12px;outline:none}
+.search-inp input:focus{border-color:#6366f1}
+.search-inp button{padding:8px 12px;border:none;border-radius:8px;background:#6366f1;color:#fff;cursor:pointer;font-size:11px;font-weight:700}
 </style>
 </head>
 <body>
 <div id="header">
-<div class="dot"></div>
-<h1>Jarvis</h1>
-<span class="status" id="status">connected</span>
+<div class="logo"><em>J</em>ARVIS</div>
+<div class="spacer"></div>
+<div class="pill on" id="sp"><span class="dot"></span><span id="st">Online</span></div>
 </div>
-<div id="messages">
-<div class="welcome" id="welcome">
-<div class="icon">🧠</div>
-<h2>Jarvis</h2>
-<p>Your AI assistant. Ask me anything.</p>
+<div id="tabs">
+<div class="tab active" onclick="showTab('chat',this)">💬 Chat</div>
+<div class="tab" onclick="showTab('files',this)">📁 Files</div>
+<div class="tab" onclick="showTab('search',this)">🔍 Search</div>
+<div class="tab" onclick="showTab('terminal',this)">💻 Terminal</div>
+<div class="tab" onclick="showTab('memory',this)">🧠 Memory</div>
+<div class="tab" onclick="showTab('skills',this)">⚡ Skills</div>
+</div>
+
+<!-- Chat -->
+<div id="v-chat" class="content active">
+<div id="chat-msgs"></div>
+<div id="inp-row">
+<button class="mic-btn" id="mb" onclick="micToggle()">🎤</button>
+<input id="ci" placeholder="Message Jarvis..." onkeydown="if(event.key==='Enter')chatSend()">
+<button id="sb" onclick="chatSend()">SEND</button>
 </div>
 </div>
-<div id="input">
-<input type="text" id="textInput" placeholder="Message Jarvis..." autofocus>
-<button id="sendBtn" disabled>➤</button>
+
+<!-- Files -->
+<div id="v-files" class="content">
+<div class="sec-title">File Browser</div>
+<div class="d-btn" style="margin-bottom:6px">
+<button onclick="fileList('.')">📂 Root</button>
+<button onclick="fileList('..')">⬆ Up</button>
 </div>
+<div class="search-inp">
+<input id="fp" placeholder="Path..." value=".">
+<button onclick="fileList(document.getElementById('fp').value)">GO</button>
+</div>
+<div id="fr"></div>
+</div>
+
+<!-- Search -->
+<div id="v-search" class="content">
+<div class="sec-title">Search Files</div>
+<div class="search-inp">
+<input id="sq" placeholder="Search term...">
+<button onclick="doSearch()">SEARCH</button>
+</div>
+<div class="d-btn" style="margin-bottom:6px">
+<button onclick="document.getElementById('sq').value='.py';doSearch()">.py</button>
+<button onclick="document.getElementById('sq').value='.js';doSearch()">.js</button>
+<button onclick="document.getElementById('sq').value='.md';doSearch()">.md</button>
+</div>
+<div id="sr" class="results" style="font-size:13px;line-height:1.6"></div>
+</div>
+
+<!-- Terminal -->
+<div id="v-terminal" class="content">
+<div class="sec-title">Command Line</div>
+<div class="search-inp">
+<input id="tc" placeholder="Enter command..." style="font-family:monospace" onkeydown="if(event.key==='Enter')termRun()">
+<button onclick="termRun()">RUN</button>
+</div>
+<div class="d-btn" style="margin-bottom:6px">
+<button onclick="document.getElementById('tc').value='dir /b';termRun()">dir</button>
+<button onclick="document.getElementById('tc').value='node --version';termRun()">node</button>
+<button onclick="document.getElementById('tc').value='python --version';termRun()">python</button>
+<button onclick="document.getElementById('tc').value='ipconfig';termRun()">ipconfig</button>
+</div>
+<div id="to" class="term-box">Output appears here...</div>
+</div>
+
+<!-- Memory -->
+<div id="v-memory" class="content">
+<div class="sec-title">Conversations</div>
+<button onclick="memLoad()" style="padding:8px 16px;border:1px solid rgba(255,255,255,0.07);border-radius:8px;background:rgba(255,255,255,0.03);color:#dde3ed;cursor:pointer;font-size:11px;font-weight:700;margin-bottom:8px">🔄 Refresh</button>
+<div id="mr"></div>
+</div>
+
+<!-- Skills -->
+<div id="v-skills" class="content">
+<div class="sec-title">Capabilities</div>
+<button onclick="skillLoad()" style="padding:8px 16px;border:1px solid rgba(255,255,255,0.07);border-radius:8px;background:rgba(255,255,255,0.03);color:#dde3ed;cursor:pointer;font-size:11px;font-weight:700;margin-bottom:8px">🔄 Refresh</button>
+<div id="skr"></div>
+</div>
+
 <script>
-const SERVER = window.location.origin;
-const messages = document.getElementById('messages');
-const input = document.getElementById('textInput');
-const sendBtn = document.getElementById('sendBtn');
-const welcome = document.getElementById('welcome');
-const status = document.getElementById('status');
-let loading = false;
-
-// Load history
-fetch(SERVER + '/history?count=50').then(r=>r.json()).then(data=>{
-if(data.history&&data.history.length>0){
-welcome.style.display='none';
-data.history.forEach(addMsg);
-scrollToBottom();
+const A=window.location.origin;
+function showTab(n,el){
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+document.querySelectorAll('.content').forEach(c=>c.classList.remove('active'));
+el.classList.add('active');document.getElementById('v-'+n).classList.add('active');
+if(n==='memory')memLoad();if(n==='skills')skillLoad();
 }
-}).catch(()=>{});
 
-input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
-input.addEventListener('input',()=>{sendBtn.disabled=!input.value.trim()||loading});
-sendBtn.addEventListener('click',send);
-
-async function send(){
-const text=input.value.trim();
-if(!text||loading)return;
-input.value='';sendBtn.disabled=true;
-welcome.style.display='none';
-addMsg({role:'user',text,timestamp:Date.now()});
-scrollToBottom();
-const typing=showTyping();
-loading=true;
+// Chat
+function addM(r,t){
+const d=document.createElement('div');
+d.className='msg '+(r==='j'?'msg-j':r==='u'?'msg-u':'msg-sys');
+d.innerHTML=t+(r!=='s'?'<time>'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</time>':'');
+document.getElementById('chat-msgs').appendChild(d);
+document.getElementById('chat-msgs').scrollTop=document.getElementById('chat-msgs').scrollHeight;
+}
+async function chatSend(){
+const i=document.getElementById('ci'),t=i.value.trim();if(!t)return;
+i.value='';document.getElementById('sb').disabled=true;
+addM('u',t);
+const td=document.createElement('div');td.className='msg msg-j';td.textContent='...';
+document.getElementById('chat-msgs').appendChild(td);
 try{
-const res=await fetch(SERVER+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})});
-const data=await res.json();
-typing.remove();
-addMsg({role:'assistant',text:data.response||'...',timestamp:data.timestamp||Date.now()});
-speak(data.response||'');
-}catch(e){
-typing.remove();
-addMsg({role:'assistant',text:'Error: '+e.message});
-}
-loading=false;
-sendBtn.disabled=!input.value.trim();
-scrollToBottom();
+const r=await fetch(A+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:t})});
+const d=await r.json();td.remove();
+addM('j',d.response||d.error||'...');
+if(d.skill)addM('s','🔧 Used: '+d.skill);
+}catch(e){td.remove();addM('j','❌ Error');}
+document.getElementById('sb').disabled=false;
 }
 
-function addMsg(msg){
-const div=document.createElement('div');
-div.className='msg '+(msg.role==='user'?'user':'jarvis');
-const time=new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-div.innerHTML=msg.text+'<div class="time">'+time+'</div>';
-messages.appendChild(div);
+// Mic
+let mr=null,ac=[];
+function micToggle(){
+const b=document.getElementById('mb');
+if(mr&&mr.state==='recording'){mr.stop();b.classList.remove('recording');b.textContent='🎤';return;}
+navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{
+mr=new MediaRecorder(s);ac=[];
+mr.ondataavailable=e=>ac.push(e.data);
+mr.onstop=async()=>{
+const bl=new Blob(ac,{type:'audio/webm'});
+const ft=new FormData();ft.append('audio',bl);
+try{
+const r=await fetch(A+'/api/stt',{method:'POST',body:ft});
+const d=await r.json();
+if(d.text){document.getElementById('ci').value=d.text;chatSend();}
+}catch{}
+s.getTracks().forEach(t=>t.stop());
+};
+mr.start();b.classList.add('recording');b.textContent='🔴';
+}).catch(()=>addM('s','❌ Mic denied'));
 }
 
-function showTyping(){
-const div=document.createElement('div');
-div.className='msg jarvis typing';
-div.innerHTML='<span></span><span></span><span></span>';
-messages.appendChild(div);
-scrollToBottom();
-return div;
+// Files
+let fp='.';
+async function fileList(p){
+fp=p;document.getElementById('fp').value=p;
+const r=await fetch(A+'/api/files/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p})});
+const d=await r.json();const el=document.getElementById('fr');
+if(d.error){el.innerHTML='<div class="msg msg-sys">❌ '+d.error+'</div>';return;}
+el.innerHTML='<div class="msg msg-sys">📁 '+d.files.length+' items</div>';
+d.files.forEach(f=>{
+const di=document.createElement('div');di.className='file-item';
+di.innerHTML='<span class="ic">'+(f.type==='directory'?'📁':'📄')+'</span><span class="nm">'+f.name+'</span><span class="sz">'+(f.size?(f.size/1024).toFixed(1)+'KB':'')+'</span>';
+if(f.type==='directory')di.onclick=()=>fileList(fp+'/'+f.name);
+el.appendChild(di);
+});
 }
 
-function scrollToBottom(){messages.scrollTop=messages.scrollHeight}
-
-function speak(text){
-if('speechSynthesis' in window){
-const u=new SpeechSynthesisUtterance(text);
-u.rate=0.9;u.pitch=1;
-speechSynthesis.cancel();
-speechSynthesis.speak(u);
+// Search
+async function doSearch(){
+const q=document.getElementById('sq').value.trim();if(!q)return;
+document.getElementById('sr').innerHTML='Searching...';
+try{
+const r=await fetch(A+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'search files for '+q})});
+const d=await r.json();
+document.getElementById('sr').innerHTML='<div class="msg msg-j">'+d.response+'</div>';
+}catch{document.getElementById('sr').innerHTML='<div class="msg msg-sys">❌ Error</div>';}
 }
+
+// Terminal
+async function termRun(){
+const c=document.getElementById('tc').value.trim();if(!c)return;
+const el=document.getElementById('to');el.textContent='$ '+c+'\n';
+try{
+const r=await fetch(A+'/api/terminal/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:c})});
+const d=await r.json();
+el.textContent+=(d.output||'')+(d.error?'\n❌ '+d.error:'')+'\nExit: '+(d.exitCode||0);
+}catch(e){el.textContent+='\n❌ '+e.message;}
+el.scrollTop=el.scrollHeight;
+}
+
+// Memory
+async function memLoad(){
+const el=document.getElementById('mr');el.innerHTML='Loading...';
+try{
+const r=await fetch(A+'/history?count=30');const d=await r.json();
+if(!d.history||!d.history.length){el.innerHTML='<div class="msg msg-sys">No history</div>';return;}
+el.innerHTML='<div class="msg msg-sys">📝 '+d.history.length+' entries</div>';
+d.history.slice().reverse().forEach(h=>{
+const di=document.createElement('div');di.className='msg '+(h.role==='user'?'msg-u':'msg-j');
+di.textContent=(h.content||'...').substring(0,200)+(h.content&&h.content.length>200?'...':'');
+el.appendChild(di);
+});
+}catch{el.innerHTML='<div class="msg msg-sys">❌ Error</div>';}
+}
+
+// Skills
+async function skillLoad(){
+const el=document.getElementById('skr');el.innerHTML='Loading...';
+try{
+const r=await fetch(A+'/api/skills');const d=await r.json();
+if(!d.skills||!d.skills.length){el.innerHTML='<div class="msg msg-sys">No skills</div>';return;}
+el.innerHTML='<div class="msg msg-sys">⚡ '+d.skills.length+' skills</div>';
+d.skills.forEach(s=>{
+const t=document.createElement('span');t.className='tag';
+t.textContent=s.name+(s.description?' — '+s.description:'');
+el.appendChild(t);el.appendChild(document.createTextNode(' '));
+});
+}catch{el.innerHTML='<div class="msg msg-sys">❌ Error</div>';}
 }
 </script>
 </body>
