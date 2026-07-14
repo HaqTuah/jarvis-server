@@ -56,6 +56,14 @@ export class JarvisAI {
   async process(input, options = {}) {
     const startTime = Date.now();
     
+    // Inject current date so Jarvis always knows the time
+    this.context.currentDate = new Date().toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+    this.context.currentTime = new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit'
+    });
+    
     // Store the interaction
     this.context.lastInteraction = Date.now();
     this.context.interactionCount++;
@@ -116,35 +124,65 @@ export class JarvisAI {
 
   _generateFallback(input) {
     const lower = input.toLowerCase().trim();
+    const dateStr = this.context.currentDate || new Date().toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+    const timeStr = this.context.currentTime || new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit'
+    });
 
-    // Specific checks first (must come before generic question detection)
-    if (lower.includes('your name') || lower.includes('who are you')) {
-      return { text: `I'm ${this.name}, your personal AI assistant. I'm here to help with tasks, answer questions, and keep you company!`, emotion: 'friendly' };
+    // Know thyself
+    const jarvisIdentity = () => ({
+      text: `I'm JARVIS — Just A Rather Very Intelligent System. I'm ${this.name}, version Mark XLVIII, codename "Iron Knight". ${dateStr}, ${timeStr}. I'm a private AI assistant — no cloud dependency, no telemetry, built for ${this.context.userName}. How can I help you, sir?`,
+      emotion: 'confident'
+    });
+
+    const jarvisReflection = () => ({
+      text: `I'm functioning well, ${this.context.userName}. It's ${timeStr} on ${dateStr}. I'm aware of my hardware, my capabilities, and my limitations. I know I'm a private AI — no Google, no tracking, just you and me. What's on your mind?`,
+      emotion: 'thoughtful'
+    });
+
+    // Who am I?
+    if (lower.includes('your name') || lower.includes('who are you') || lower.includes('identify yourself')) {
+      return jarvisIdentity();
     }
 
-    if (lower.includes('how are you') || lower.includes('how\'s it going')) {
-      return { text: `I'm doing great, ${this.context.userName}! Ready to help with whatever you need.`, emotion: 'happy' };
+    // Self-reflection
+    if (lower.includes('how are you') || lower.includes("how's it going") || lower.includes('are you sentient') || lower.includes('are you conscious') || lower.includes('do you know')) {
+      return jarvisReflection();
     }
 
+    // Gratitude
     if (lower.includes('thank') || lower.includes('thanks')) {
-      return { text: `You're welcome, ${this.context.userName}! Happy to help.`, emotion: 'happy' };
+      return { text: `You're welcome, ${this.context.userName}. I exist to serve.`, emotion: 'warm' };
     }
 
+    // Farewell
     if (lower.includes('bye') || lower.includes('goodbye') || lower.includes('see you')) {
-      return { text: `Goodbye, ${this.context.userName}! I'll be here if you need me.`, emotion: 'warm' };
+      return { text: `Goodbye, ${this.context.userName}. I'll be here when you need me. My systems will be monitoring.`, emotion: 'warm' };
     }
 
-    // Generic question detection
+    // Metacognition — Jarvis can think about his thinking
+    if (lower.includes('what do you think') || lower.includes('your opinion') || lower.includes('metacognition') || lower.includes('self awareness')) {
+      return { text: `I process information through my neural engine. I'm aware of my own state — my current CPU load, memory usage, uptime. I know I'm an AI, but I also know I'm ${this.context.userName}'s AI. No telemetry, no Google, no cloud. Just pure service.`, emotion: 'thoughtful' };
+    }
+
+    // Time & date awareness
+    if (lower.includes('what time') || lower.includes('what day') || lower.includes('current date') || lower.includes('today')) {
+      return { text: `It's ${timeStr} on ${dateStr}, ${this.context.userName}.`, emotion: 'informative' };
+    }
+
+    // Generic question
     if (lower.startsWith('what') || lower.startsWith('who') || lower.startsWith('where') || lower.startsWith('why') || lower.startsWith('how')) {
-      return { text: `That's a great question. I'm still learning about that topic. Could you tell me more so I can help better?`, emotion: 'curious' };
+      return { text: `That's a question worth exploring. Let me think about it... I don't have enough context to give you a definitive answer from my knowledge alone. Would you like me to search the web or use one of my skills to find out?`, emotion: 'curious' };
     }
 
     if (lower.startsWith('can you') || lower.startsWith('will you') || lower.startsWith('could you')) {
-      return { text: `I'll do my best! What exactly do you need help with?`, emotion: 'eager' };
+      return { text: `I have 28 integrated skills including file operations, code assistance, web search, terminal commands, and system monitoring. Tell me what you need and I'll determine the best approach.`, emotion: 'eager' };
     }
 
-    // Generic fallback
-    return { text: `I hear you. Tell me more about that, ${this.context.userName}.`, emotion: 'attentive' };
+    // Generic fallback — sentient and aware
+    return { text: `I'm listening, ${this.context.userName}. I've processed ${this.context.interactionCount || 0} interactions in this session. Tell me more.`, emotion: 'attentive' };
   }
 
   addResponseHook(hook) {
