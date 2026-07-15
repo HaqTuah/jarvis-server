@@ -63,7 +63,8 @@ async function initJarvis() {
     skillEngine: skills,
     name: 'Jarvis',
     userName: 'You',
-    platform: 'cloud'
+    platform: 'cloud',
+    openrouterKey: process.env.OPENROUTER_KEY || ''
   });
 
   await jarvis.init();

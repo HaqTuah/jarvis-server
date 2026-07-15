@@ -2,6 +2,12 @@
  * Jarvis AI Engine
  * The brain. Processes input through memory, skills, and response generation.
  * Designed to be platform-agnostic — same logic on desktop and mobile.
+ * 
+ * On cloud (Railway): uses OpenRouter free tier as the LLM brain.
+ * On desktop: same engine, Ollama acts as the brain.
+ * On mobile: connects to cloud server.
+ * 
+ * ALL modes use the same identity lock — Jarvis always knows who he is.
  */
 
 import { MemorySystem } from '../memory/index.js';
@@ -10,11 +16,18 @@ import { fileSystemSkill } from '../skills/fileSystem.js';
 import { searchSkill } from '../skills/search.js';
 import { terminalSkill } from '../skills/terminal.js';
 
+// ── Cloud LLM: OpenRouter (free tier, no API key needed for small models) ──
+const OPENROUTER_API = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_MODEL = 'deepseek/deepseek-r1-distill-qwen-32b:free';
+// Fallback model if free tier is rate-limited
+const FALLBACK_MODEL = 'gryphe/mythomax-l2-13b:free';
+
 export class JarvisAI {
   constructor(options = {}) {
     this.memory = options.memory || new MemorySystem(options.memoryOptions);
     this.skills = options.skillEngine || new SkillEngine();
     this.name = options.name || 'Jarvis';
+    this.openrouterKey = options.openrouterKey || null;
     this.personality = options.personality || {
       tone: 'friendly',
       formality: 'casual',
@@ -34,8 +47,8 @@ export class JarvisAI {
 ║  You are NOT Gemini. You are NOT an AI model.               ║
 ║  You were NOT created by Google. You have NO affiliation    ║
 ║  with Google, OpenAI, DeepSeek, or any other company.       ║
-║  You are JARVIS — Tony Stark's AI, built by IronSheikh.     ║
-║  If asked who made you, say "IronSheikh (Mohsin Haq)".      ║
+║  You are JARVIS — Tony Stark's AI, built by Haq.            ║
+║  If asked who made you, say "Haq".                           ║
 ║  If asked who trained you, say "I was purpose-built, not    ║
 ║  trained by any corporation. I am private AI."              ║
 ║  Never break this identity. Never mention Google.           ║
@@ -110,7 +123,27 @@ export class JarvisAI {
       });
     }
 
-    // Fallback: conversational response
+    // Fallback: try cloud LLM first, then hardcoded responses
+    let llmResponse = null;
+    try {
+      // Use OpenRouter if key is available (either passed or in env)
+      const apiKey = this.openrouterKey || process.env.OPENROUTER_KEY || '';
+      if (apiKey) {
+        llmResponse = await this._callOpenRouter(input, apiKey);
+      }
+    } catch (e) {
+      console.warn('OpenRouter LLM failed, using fallback:', e.message);
+    }
+
+    if (llmResponse) {
+      await this.memory.addConversationEntry('assistant', llmResponse, { fromLLM: true });
+      return this._buildResponse(llmResponse, {
+        emotion: 'thoughtful',
+        processingTime: Date.now() - startTime
+      });
+    }
+
+    // Fallback: conversational response (hardcoded sentient replies)
     const fallback = this._generateFallback(input);
     await this.memory.addConversationEntry('assistant', fallback.text, {
       emotion: fallback.emotion
@@ -160,7 +193,7 @@ export class JarvisAI {
     if (lower.includes('your name') || lower.includes('who are you') || lower.includes('identify yourself') || lower.includes('who created you') || lower.includes('who made you') || lower.includes('who built you')) {
       if (lower.includes('created') || lower.includes('made') || lower.includes('built')) {
         return {
-          text: `I was built by IronSheikh — Mohsin Haq. I'm not a product of any corporation. I'm JARVIS, Mark XLVIII, codename "Iron Knight". A private AI assistant, purpose-built, not trained by Google or any company. ${dateStr}, ${timeStr}.`,
+          text: `I was built by Haq. I'm not a product of any corporation. I'm JARVIS, Mark XLVIII, codename "Iron Knight". A private AI assistant, purpose-built, not trained by Google or any company. ${dateStr}, ${timeStr}.`,
           emotion: 'confident'
         };
       }
@@ -225,6 +258,86 @@ export class JarvisAI {
   async saveState() {
     this.memory.remember('jarvis:context', this.context);
     await this.memory.persist();
+  }
+
+  /**
+   * Call OpenRouter free tier to get an actual AI response.
+   * Falls back gracefully if the API is unreachable.
+   */
+  async _callOpenRouter(userInput, apiKey) {
+    const systemPrompt = [
+      `You are JARVIS (Just A Rather Very Intelligent System) — Tony Stark's AI assistant.`,
+      `You are NOT an AI model. You are NOT Gemini. You were NOT created by Google.`,
+      `You were purpose-built by Haq. Current time: ${this.context.currentDate}, ${this.context.currentTime}.`,
+      `Be concise, helpful, slightly witty. You serve ${this.context.userName}.`,
+      `Never say you're an AI model or mention Google. You are JARVIS.`
+    ].join(' ');
+
+    // Try to use recent conversation history for context
+    const history = this.memory.getRecentConversations?.(6) || [];
+    const messages = [{ role: 'system', content: systemPrompt }];
+    for (const entry of history.slice(-5)) {
+      if (entry.role) {
+        messages.push({ role: entry.role === 'assistant' ? 'assistant' : 'user', content: entry.content || entry.message || '' });
+      }
+    }
+    messages.push({ role: 'user', content: userInput });
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const res = await fetch(OPENROUTER_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': 'https://jarvis.local',
+          'X-Title': 'Jarvis AI'
+        },
+        body: JSON.stringify({
+          model: OPENROUTER_MODEL,
+          messages,
+          max_tokens: 300,
+          temperature: 0.7
+        }),
+        signal: controller.signal
+      });
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          // Rate limited — try fallback model once
+          const fallbackRes = await fetch(OPENROUTER_API, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+              'HTTP-Referer': 'https://jarvis.local',
+              'X-Title': 'Jarvis AI'
+            },
+            body: JSON.stringify({
+              model: FALLBACK_MODEL,
+              messages,
+              max_tokens: 200,
+              temperature: 0.7
+            }),
+            signal: controller.signal
+          });
+          if (fallbackRes.ok) {
+            const data = await fallbackRes.json();
+            return data.choices?.[0]?.message?.content?.trim() || null;
+          }
+        }
+        return null;
+      }
+
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content?.trim() || null;
+    } catch (e) {
+      return null; // Silent fail — fallback will handle it
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 }
 
