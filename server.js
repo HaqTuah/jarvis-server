@@ -240,6 +240,113 @@ app.get('/api/skills', (req, res) => {
   res.json({ skills: jarvis.skills.listSkills() });
 });
 
+// ── Push notification registration ─────────────────────────
+const pushTokens = [];
+app.post('/api/register-push', (req, res) => {
+  const { token, platform } = req.body;
+  if (token) {
+    pushTokens.push({ token, platform, time: Date.now() });
+    console.log(`Push token registered: ${platform} - ${token.slice(0, 20)}...`);
+    res.json({ status: 'registered' });
+  } else {
+    res.status(400).json({ error: 'Token required' });
+  }
+});
+
+// ── Web Search API ─────────────────────────────────────────
+app.post('/api/web-search', async (req, res) => {
+  try {
+    const { query, count = 5 } = req.body;
+    if (!query) return res.status(400).json({ error: 'Query required' });
+    const { load } = await import('cheerio');
+    const results = [];
+    const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    const resp = await fetch(searchUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; JarvisAI/1.0)' }
+    });
+    const html = await resp.text();
+    const $ = load(html);
+    $('.result').slice(0, count).each((i, el) => {
+      const title = $(el).find('.result__title').text().trim();
+      const snippet = $(el).find('.result__snippet').text().trim();
+      const link = $(el).find('.result__url').attr('href') || '';
+      if (title) results.push({ title, snippet, link });
+    });
+    res.json({ results, query });
+  } catch (e) {
+    res.status(500).json({ error: e.message, query: req.body.query });
+  }
+});
+
+// ── Send Message API (via Twilio or webhook) ────────────────
+app.post('/api/send-message', async (req, res) => {
+  try {
+    const { to, message, platform = 'sms' } = req.body;
+    if (!to || !message) return res.status(400).json({ error: 'Recipient and message required' });
+    
+    if (platform === 'sms' && process.env.TWILIO_SID) {
+      // Twilio SMS
+      const twilio = await import('twilio');
+      const client = twilio.default(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
+      await client.messages.create({ body: message, from: process.env.TWILIO_FROM, to });
+      return res.json({ status: 'sent', platform: 'sms', to });
+    }
+
+    // Fallback: log it (no Twilio configured)
+    console.log(`[Message] ${platform} → ${to}: ${message}`);
+    res.json({ status: 'logged', platform, to, note: 'No SMS provider configured. Message was logged.' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── App Launch API (mobile app deep links) ──────────────────
+app.post('/api/launch-app', async (req, res) => {
+  try {
+    const { app: appName, action } = req.body;
+    if (!appName) return res.status(400).json({ error: 'App name required' });
+    
+    const appSchemes = {
+      'phone': 'tel://',
+      'messages': 'sms://',
+      'mail': 'mailto://',
+      'maps': 'maps://',
+      'music': 'music://',
+      'photos': 'photos-redirect://',
+      'camera': 'camera://',
+      'settings': 'app-settings://',
+      'safari': 'https://',
+      'chrome': 'googlechrome://',
+      'youtube': 'youtube://',
+      'spotify': 'spotify://',
+      'twitter': 'twitter://',
+      'instagram': 'instagram://',
+      'facebook': 'fb://',
+      'whatsapp': 'whatsapp://',
+      'telegram': 'tg://',
+      'linkedin': 'linkedin://',
+      'reddit': 'reddit://',
+      'netflix': 'nflx://',
+      'maps': 'maps://?q=',
+    };
+
+    const scheme = appSchemes[appName.toLowerCase()];
+    if (scheme) {
+      const url = scheme + (action || '');
+      return res.json({ status: 'launch', app: appName, url, message: `Opening ${appName}...` });
+    }
+
+    // Web search fallback
+    if (appName === 'web' || appName === 'browser') {
+      return res.json({ status: 'launch', app: 'safari', url: `https://${action || 'google.com'}`, message: `Opening browser...` });
+    }
+
+    res.json({ status: 'unknown', app: appName, message: `Don't know how to launch ${appName} on mobile.` });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Start ───────────────────────────────────────────────────
 async function start() {
   await initJarvis();
