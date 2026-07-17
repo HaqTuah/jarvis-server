@@ -8,6 +8,7 @@
  * Deploy to: Railway, Render, Fly.io, or any Node.js host
  */
 
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';

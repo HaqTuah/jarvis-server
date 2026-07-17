@@ -16,11 +16,11 @@ import { fileSystemSkill } from '../skills/fileSystem.js';
 import { searchSkill } from '../skills/search.js';
 import { terminalSkill } from '../skills/terminal.js';
 
-// ── Cloud LLM: OpenRouter (free tier, no API key needed for small models) ──
+// ── Cloud LLM: OpenRouter (free tier, use openrouter/free or a specific model) ──
 const OPENROUTER_API = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_MODEL = 'deepseek/deepseek-r1-distill-qwen-32b:free';
-// Fallback model if free tier is rate-limited
-const FALLBACK_MODEL = 'gryphe/mythomax-l2-13b:free';
+const OPENROUTER_MODEL = 'openrouter/free';
+// Fallback: specific free model if the router fails
+const FALLBACK_MODEL = 'google/gemma-4-26b-a4b-it:free';
 
 export class JarvisAI {
   constructor(options = {}) {
