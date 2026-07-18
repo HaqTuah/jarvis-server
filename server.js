@@ -14,6 +14,10 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
+import multer from 'multer';
+import crypto from 'crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -75,7 +79,29 @@ async function initJarvis() {
 
 // ── Express App ─────────────────────────────────────────────
 const app = express();
+const server = createServer(app);
+const wss = new WebSocketServer({ server, path: '/ws/audio' });
 const PORT = process.env.PORT || 3000;
+
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// Auth tokens (simple session-based, like XLIX)
+const validTokens = new Set();
+
+function generateToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function auth(req) {
+  const header = req.headers.authorization || '';
+  const token = header.replace('Bearer ', '').trim();
+  if (token && validTokens.has(token)) return true;
+  // Also allow without token for now for backwards compat
+  return true;
+}
+
+const upload = multer({ dest: path.join(UPLOADS_DIR, 'temp') });
 
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
@@ -348,11 +374,83 @@ app.post('/api/launch-app', async (req, res) => {
   }
 });
 
+// ── File Upload (phone → PC, like XLIX) ─────────────────────
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const destName = req.body.name || req.file.originalname;
+    const destPath = path.join(UPLOADS_DIR, destName);
+    fs.renameSync(req.file.path, destPath);
+    console.log(`📁 File uploaded: ${destName} (${(req.file.size / 1024).toFixed(1)} KB)`);
+    res.json({ status: 'uploaded', name: destName, size: req.file.size });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// List uploaded files
+app.get('/api/uploads', (req, res) => {
+  try {
+    const files = fs.readdirSync(UPLOADS_DIR).filter(f => f !== 'temp').map(f => {
+      const stat = fs.statSync(path.join(UPLOADS_DIR, f));
+      return { name: f, size: stat.size, time: stat.mtime };
+    });
+    res.json({ files });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Download uploaded file
+app.get('/api/uploads/:name', (req, res) => {
+  const filePath = path.join(UPLOADS_DIR, req.params.name);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Not found' });
+  res.download(filePath);
+});
+
+// ── Get auth token (like XLIX phone pairing) ───────────────
+app.post('/api/auth', (req, res) => {
+  const token = generateToken();
+  validTokens.add(token);
+  res.json({ token, expires: 'session' });
+});
+
+// ── WebSocket Voice (real-time audio, like XLIX Gemini Live) ──
+wss.on('connection', (ws, req) => {
+  console.log('🎤 Voice WebSocket connected');
+
+  ws.on('message', async (data) => {
+    try {
+      if (data instanceof Buffer) {
+        // Audio chunk received — process with Jarvis
+        // For now, convert to text via a simple approach
+        const text = data.toString('utf-8').trim();
+        if (text && text.length > 2) {
+          const response = await jarvis.process(text);
+          ws.send(JSON.stringify({ type: 'response', text: response.text, emotion: response.emotion }));
+        }
+      } else {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'transcript') {
+          const response = await jarvis.process(msg.text);
+          ws.send(JSON.stringify({ type: 'response', text: response.text, emotion: response.emotion }));
+        }
+        if (msg.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+      }
+    } catch (e) {
+      console.error('Voice WS error:', e.message);
+    }
+  });
+
+  ws.on('close', () => console.log('🎤 Voice WebSocket disconnected'));
+  ws.send(JSON.stringify({ type: 'connected', name: 'Jarvis' }));
+});
+
 // ── Start ───────────────────────────────────────────────────
 async function start() {
   await initJarvis();
   
-  app.listen(PORT, '0.0.0.0', () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log('');
     console.log('  ╔══════════════════════════════════════════╗');
     console.log('  ║     🧠  JARVIS CLOUD SERVER              ║');

@@ -13,7 +13,9 @@
     "cheerio-to-text": "^0.2.8",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
-    "express": "^4.21.0"
+    "express": "^4.21.0",
+    "multer": "^2.2.0",
+    "ws": "^8.21.1"
   },
   "devDependencies": {
     "@expo/ngrok": "^4.1.3"
